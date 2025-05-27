@@ -1,22 +1,26 @@
 "use client";
 
 import { FlaggedReviews } from "@/components/dashboard/admin/flagged-reviews";
-import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { useTranslation } from "@/lib/translation-context";
 
 export default function FlaggedReviewsPage() {
   const { t } = useTranslation();
 
   return (
-    <DashboardShell>
-      <DashboardHeader
-        heading={t("flagged_reviews")}
-        description={t("flagged_reviews_description")}
-      />
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-gradient">
+            {t("flagged_reviews")}
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            {t("flagged_reviews_description")}
+          </p>
+        </div>
+      </div>
       <div className="grid gap-8">
         <FlaggedReviews />
       </div>
-    </DashboardShell>
+    </div>
   );
 }
