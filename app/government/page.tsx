@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BarChart2,
-  Download,
   FileText,
-  Loader2,
   MessageSquare,
   ThumbsUp,
   Users,
@@ -23,26 +22,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
-import {
-  fetchDashboardStats,
-  generateReport,
-  fetchSentimentBreakdown,
-} from "@/store/slices/governmentStatsSlice";
+import { fetchDashboardStats } from "@/store/slices/governmentStatsSlice";
 import { getSentimentStats } from "@/store/slices/sentimentSlice";
 import { useTranslation } from "@/lib/translation-context";
 
 export default function GovernmentDashboardPage() {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const { user } = useAppSelector((state) => state.auth);
-  const {
-    dashboardStats,
-    loading,
-    error,
-    reportGenerating,
-    reportUrl,
-    reportError,
-  } = useAppSelector((state) => state.governmentStats);
+  const { dashboardStats, loading, error } = useAppSelector(
+    (state) => state.governmentStats
+  );
   const { stats: sentimentStats, loading: sentimentLoading } = useAppSelector(
     (state) => state.sentiment
   );
@@ -122,43 +113,17 @@ export default function GovernmentDashboardPage() {
     }
   }, [dispatch, officeId, user, t]);
 
-  // Handle report generation
-  const handleGenerateReport = async () => {
-    try {
-      const result = await dispatch(generateReport({ officeId })).unwrap();
-      toast.success(t("report_generated_successfully"));
-
-      // Check if the URL is a mock URL (for development/testing)
-      if (result.reportUrl.startsWith("/mock")) {
-        toast.info(t("using_mock_report"));
-        // For development, just show a message instead of opening a non-existent URL
-        console.log("Mock report URL:", result.reportUrl);
-      } else {
-        // Open the real report URL in a new tab
-        window.open(result.reportUrl, "_blank");
-      }
-    } catch (error) {
-      console.error("Report generation error:", error);
-      toast.error(t("failed_to_generate_report"));
-    }
+  // Navigate to generate report page
+  const handleNavigateToGenerateReport = () => {
+    router.push("/government/reports/generate");
   };
-
-  // Open report in new tab when URL is available (except for mock URLs)
-  useEffect(() => {
-    if (reportUrl && !reportUrl.startsWith("/mock")) {
-      window.open(reportUrl, "_blank");
-    }
-  }, [reportUrl]);
 
   // Show error if any
   useEffect(() => {
     if (error) {
       toast.error(error);
     }
-    if (reportError) {
-      toast.error(reportError);
-    }
-  }, [error, reportError]);
+  }, [error]);
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -174,21 +139,11 @@ export default function GovernmentDashboardPage() {
           <Button
             variant="gradient"
             size="lg"
-            onClick={handleGenerateReport}
-            disabled={reportGenerating}
+            onClick={handleNavigateToGenerateReport}
             className="shadow-medium hover:shadow-strong"
           >
-            {reportGenerating ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                {t("generating")}
-              </>
-            ) : (
-              <>
-                <Download className="mr-2 h-5 w-5" />
-                {t("generate_report")}
-              </>
-            )}
+            <FileText className="mr-2 h-5 w-5" />
+            {t("generate_report")}
           </Button>
         </div>
       </div>
@@ -526,20 +481,10 @@ export default function GovernmentDashboardPage() {
               variant="gradient"
               size="lg"
               className="w-full shadow-medium hover:shadow-strong"
-              onClick={handleGenerateReport}
-              disabled={reportGenerating}
+              onClick={handleNavigateToGenerateReport}
             >
-              {reportGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  {t("generating")}
-                </>
-              ) : (
-                <>
-                  <FileText className="mr-2 h-5 w-5" />
-                  {t("generate_detailed_report")}
-                </>
-              )}
+              <FileText className="mr-2 h-5 w-5" />
+              {t("generate_detailed_report")}
             </Button>
           </CardFooter>
         </Card>

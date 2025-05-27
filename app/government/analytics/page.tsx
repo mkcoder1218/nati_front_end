@@ -43,6 +43,9 @@ import { Separator } from "@/components/ui/separator";
 import { useTranslation } from "@/lib/translation-context";
 import { toast } from "sonner";
 import { format, subMonths } from "date-fns";
+import SentimentService, {
+  SentimentKeywords,
+} from "@/services/sentiment.service";
 
 // Remove mock data - we'll use real data from the backend
 
@@ -66,11 +69,31 @@ export default function GovernmentAnalyticsPage() {
   );
   const [timeRange, setTimeRange] = useState("6months");
   const [activeTab, setActiveTab] = useState("overview");
+  const [sentimentKeywords, setSentimentKeywords] =
+    useState<SentimentKeywords | null>(null);
+  const [keywordsLoading, setKeywordsLoading] = useState(false);
+
+  // Function to fetch sentiment keywords
+  const fetchSentimentKeywords = async () => {
+    try {
+      setKeywordsLoading(true);
+      const keywords = await SentimentService.getSentimentKeywords(officeId);
+      setSentimentKeywords(keywords);
+    } catch (error) {
+      console.error("Failed to fetch sentiment keywords:", error);
+      toast.error(t("failed_to_fetch_keywords"), {
+        description: "Using fallback data",
+      });
+    } finally {
+      setKeywordsLoading(false);
+    }
+  };
 
   // Fetch dashboard stats and time series data on component mount
   useEffect(() => {
     dispatch(fetchDashboardStats(officeId));
     dispatch(fetchTimeSeriesData({ officeId, timeRange }));
+    fetchSentimentKeywords();
   }, [dispatch, officeId]);
 
   // Fetch time series data when time range changes
@@ -110,6 +133,7 @@ export default function GovernmentAnalyticsPage() {
     dispatch(fetchSentimentBreakdown(officeId));
     dispatch(fetchTopIssues(officeId));
     dispatch(fetchTimeSeriesData({ officeId, timeRange }));
+    fetchSentimentKeywords();
   };
 
   return (
@@ -575,23 +599,30 @@ export default function GovernmentAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    "Helpful",
-                    "Efficient",
-                    "Professional",
-                    "Quick",
-                    "Friendly",
-                  ].map((keyword, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-sm font-medium">{keyword}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {Math.floor(Math.random() * 50) + 10} {t("mentions")}
-                      </span>
+                  {keywordsLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
-                  ))}
+                  ) : sentimentKeywords?.positive &&
+                    sentimentKeywords.positive.length > 0 ? (
+                    sentimentKeywords.positive.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-sm font-medium capitalize">
+                          {item.keyword}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {item.count} {t("mentions")}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-4 text-center text-muted-foreground text-sm">
+                      {t("no_positive_keywords_found")}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -605,18 +636,29 @@ export default function GovernmentAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {["Average", "Okay", "Standard", "Normal", "Expected"].map(
-                    (keyword, index) => (
+                  {keywordsLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : sentimentKeywords?.neutral &&
+                    sentimentKeywords.neutral.length > 0 ? (
+                    sentimentKeywords.neutral.map((item, index) => (
                       <div
                         key={index}
                         className="flex items-center justify-between"
                       >
-                        <span className="text-sm font-medium">{keyword}</span>
+                        <span className="text-sm font-medium capitalize">
+                          {item.keyword}
+                        </span>
                         <span className="text-sm text-muted-foreground">
-                          {Math.floor(Math.random() * 30) + 5} {t("mentions")}
+                          {item.count} {t("mentions")}
                         </span>
                       </div>
-                    )
+                    ))
+                  ) : (
+                    <div className="py-4 text-center text-muted-foreground text-sm">
+                      {t("no_neutral_keywords_found")}
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -631,23 +673,30 @@ export default function GovernmentAnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    "Slow",
-                    "Confusing",
-                    "Complicated",
-                    "Delayed",
-                    "Unhelpful",
-                  ].map((keyword, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-sm font-medium">{keyword}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {Math.floor(Math.random() * 20) + 5} {t("mentions")}
-                      </span>
+                  {keywordsLoading ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
-                  ))}
+                  ) : sentimentKeywords?.negative &&
+                    sentimentKeywords.negative.length > 0 ? (
+                    sentimentKeywords.negative.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-sm font-medium capitalize">
+                          {item.keyword}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {item.count} {t("mentions")}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="py-4 text-center text-muted-foreground text-sm">
+                      {t("no_negative_keywords_found")}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

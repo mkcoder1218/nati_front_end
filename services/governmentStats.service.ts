@@ -37,6 +37,7 @@ export interface GovernmentDashboardStats {
   office_summary: OfficeSummary;
   sentiment_breakdown: SentimentBreakdown;
   top_issues: TopIssue[];
+  ai_insights?: AIReport; // Add AI insights to dashboard stats
 }
 
 // Empty default stats structure - no mock data
@@ -189,6 +190,8 @@ const GovernmentStatsService = {
   },
 
   // Generate a detailed report for an office
+  // Note: For officials, officeId is automatically determined from their user record
+  // For admins, officeId can be specified to generate reports for specific offices
   generateReport: async (
     officeId?: string,
     startDate?: string,
@@ -201,6 +204,7 @@ const GovernmentStatsService = {
       let endpoint = "/government/reports/generate";
       const params = new URLSearchParams();
 
+      // Only add office_id for admins - officials will have it automatically determined
       if (officeId) params.append("office_id", officeId);
       if (startDate) params.append("start_date", startDate);
       if (endDate) params.append("end_date", endDate);
@@ -210,7 +214,14 @@ const GovernmentStatsService = {
       const queryString = params.toString();
       if (queryString) endpoint += `?${queryString}`;
 
-      console.log("Generating report with endpoint:", endpoint);
+      console.log("🔄 Generating report with endpoint:", endpoint);
+      console.log("📋 Report parameters:", {
+        officeId,
+        startDate,
+        endDate,
+        reportType,
+        reportFormat,
+      });
 
       const response = await api.get(endpoint);
 
