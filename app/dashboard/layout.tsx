@@ -13,13 +13,14 @@ import {
   Settings,
   Star,
   MessageCircle,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { NotificationBell } from "@/components/dashboard/notifications";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAppDispatch, useAppSelector } from "@/hooks/use-redux";
 import { logout } from "@/store/slices/authSlice";
 import {
@@ -148,6 +149,36 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  {user?.role === "citizen" && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild>
+                        <Link href="/dashboard/reviews/browse">
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          <span>Browse Reviews</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {(user?.role === "official" || user?.role === "admin") && (
+                    <>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link href="/dashboard/reviews/upvoted">
+                            <ThumbsUp className="mr-2 h-4 w-4" />
+                            <span>Upvoted Reviews</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton asChild>
+                          <Link href="/dashboard/reviews/downvoted">
+                            <ThumbsDown className="mr-2 h-4 w-4" />
+                            <span>Downvoted Reviews</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
                   {user?.role === "admin" && (
                     <SidebarMenuItem>
                       <SidebarMenuButton asChild>

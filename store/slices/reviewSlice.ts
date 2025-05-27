@@ -11,6 +11,7 @@ interface ReviewState {
   reviews: Review[];
   officeReviews: { [officeId: string]: Review[] };
   userReviews: { [userId: string]: Review[] };
+  publicReviews: Review[];
   selectedReview: Review | null;
   loading: boolean;
   error: string | null;
@@ -20,6 +21,7 @@ const initialState: ReviewState = {
   reviews: [],
   officeReviews: {},
   userReviews: {},
+  publicReviews: [],
   selectedReview: null,
   loading: false,
   error: null,
@@ -30,11 +32,35 @@ export const fetchAllReviews = createAsyncThunk(
   "review/fetchAllReviews",
   async (includeReplies: boolean = true, { rejectWithValue }) => {
     try {
-      const reviews = await ReviewService.getAllReviews(includeReplies);
-      return reviews;
+      const result = await ReviewService.getAllReviews({
+        includeReplies,
+      });
+      return result.reviews;
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch reviews"
+      );
+    }
+  }
+);
+
+export const fetchPublicReviews = createAsyncThunk(
+  "review/fetchPublicReviews",
+  async (
+    params?: {
+      limit?: number;
+      offset?: number;
+      sortBy?: string;
+      sortOrder?: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const result = await ReviewService.getPublicReviews(params);
+      return result.reviews;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch public reviews"
       );
     }
   }
@@ -274,6 +300,23 @@ const reviewSlice = createSlice({
       }
     );
     builder.addCase(fetchAllReviews.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
+
+    // Fetch Public Reviews
+    builder.addCase(fetchPublicReviews.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(
+      fetchPublicReviews.fulfilled,
+      (state, action: PayloadAction<Review[]>) => {
+        state.publicReviews = action.payload;
+        state.loading = false;
+      }
+    );
+    builder.addCase(fetchPublicReviews.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
     });

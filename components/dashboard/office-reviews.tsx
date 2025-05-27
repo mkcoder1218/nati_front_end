@@ -34,27 +34,14 @@ export function OfficeReviews({ officeId }: OfficeReviewsProps) {
   useEffect(() => {
     if (!user || initialFetchDoneRef.current) return;
 
-    if (user.role === "admin" || user.role === "official") {
-      // Admins and officials can see all reviews for the office
-      if (!officeReviews[officeId]) {
-        console.log(
-          "OfficeReviews: Fetching all reviews for office:",
-          officeId
-        );
-        dispatch(fetchReviewsByOffice(officeId));
-      }
-    } else {
-      // Citizens can only see their own reviews
-      if (!userReviews[user.user_id]) {
-        console.log(
-          "OfficeReviews: Fetching user reviews for citizen:",
-          user.user_id
-        );
-        dispatch(fetchReviewsByUser(user.user_id));
-      }
+    // All users can see all approved reviews for the office
+    if (!officeReviews[officeId]) {
+      console.log("OfficeReviews: Fetching all reviews for office:", officeId);
+      dispatch(fetchReviewsByOffice(officeId));
     }
+
     initialFetchDoneRef.current = true;
-  }, [dispatch, officeId, user, officeReviews, userReviews]);
+  }, [dispatch, officeId, user, officeReviews]);
 
   // Update local state when reviews change
   useEffect(() => {
@@ -62,18 +49,9 @@ export function OfficeReviews({ officeId }: OfficeReviewsProps) {
 
     let reviewsToShow: Review[] = [];
 
-    if (user.role === "admin" || user.role === "official") {
-      // Show all reviews for the office
-      if (officeReviews[officeId]) {
-        reviewsToShow = officeReviews[officeId];
-      }
-    } else {
-      // Show only user's own reviews for this office
-      if (userReviews[user.user_id]) {
-        reviewsToShow = userReviews[user.user_id].filter(
-          (review) => review.office_id === officeId
-        );
-      }
+    // Show all approved reviews for the office for all users
+    if (officeReviews[officeId]) {
+      reviewsToShow = officeReviews[officeId];
     }
 
     if (reviewsToShow.length > 0) {
@@ -107,7 +85,7 @@ export function OfficeReviews({ officeId }: OfficeReviewsProps) {
           });
       });
     }
-  }, [dispatch, officeId, user, officeReviews, userReviews]);
+  }, [dispatch, officeId, user, officeReviews]);
 
   // Filter reviews by status - show approved and pending reviews
   const getApprovedReviews = () => {

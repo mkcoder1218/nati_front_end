@@ -68,7 +68,7 @@ export default function GenerateReportPage() {
 
   // Get office ID from user context if available
   const { user } = useAppSelector((state) => state.auth);
-  const officeId = user?.role === "government" ? user.office_id : undefined;
+  const officeId = user?.role === "official" ? user.office_id : undefined;
 
   // State to track if we're on the client side
   const [isClient, setIsClient] = useState(false);

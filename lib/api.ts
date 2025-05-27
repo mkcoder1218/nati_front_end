@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 
 // Create axios instance with base URL from environment variables
 const api = axios.create({
-  baseURL:' https://nati-backend.onrender.com/api',
+  baseURL: "https://nati-backend.onrender.com/api",
   headers: {
     "Content-Type": "application/json",
   },

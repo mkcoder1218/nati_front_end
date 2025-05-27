@@ -183,12 +183,19 @@ function ReviewCard({ review, onVote, onFlag }: ReviewCardProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const { votesByReview, userVotes } = useAppSelector((state) => state.vote);
 
-  // Get vote counts for this review
-  const voteCounts = votesByReview[review.review_id] || {
-    helpful: 0,
-    not_helpful: 0,
-    flag: 0,
-  };
+  // Get vote counts for this review - prefer backend data if available
+  const voteCounts =
+    review.upvote_count !== undefined && review.downvote_count !== undefined
+      ? {
+          helpful: review.upvote_count || 0,
+          not_helpful: review.downvote_count || 0,
+          flag: review.flag_count || 0,
+        }
+      : votesByReview[review.review_id] || {
+          helpful: 0,
+          not_helpful: 0,
+          flag: 0,
+        };
 
   // Check if the current user has voted on this review
   const userVote = userVotes[review.review_id];

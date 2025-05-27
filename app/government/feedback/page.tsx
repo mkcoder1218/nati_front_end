@@ -9,6 +9,7 @@ import {
   updateReviewStatus,
 } from "@/store/slices/reviewSlice";
 import { createReply } from "@/store/slices/reviewReplySlice";
+import { fetchVotesByReview, voteOnReview } from "@/store/slices/voteSlice";
 import { CommentList } from "@/components/comment-system";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,6 +47,7 @@ export default function GovernmentFeedbackPage() {
   const dispatch = useAppDispatch();
   const { reviews, loading, error } = useAppSelector((state) => state.review);
   const { user } = useAppSelector((state) => state.auth);
+  const { votesByReview } = useAppSelector((state) => state.vote);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
@@ -64,57 +66,81 @@ export default function GovernmentFeedbackPage() {
     }
   }, [dispatch, user]);
 
+  // Fetch vote counts for all reviews when reviews are loaded
+  useEffect(() => {
+    if (Array.isArray(reviews) && reviews.length > 0) {
+      reviews.forEach((review) => {
+        const reviewId = review.review_id;
+
+        // The vote slice already handles deduplication, so we can just dispatch
+        // without worrying about duplicate requests
+        dispatch(fetchVotesByReview(reviewId));
+      });
+    }
+  }, [dispatch, reviews]);
+
   // Convert Review objects to Comment objects for the CommentList component
   const convertToComments = (reviews: Review[]): Comment[] => {
-    return reviews.map((review) => ({
-      id: review.review_id,
-      user: review.user_name || t("anonymous"),
-      rating: review.rating,
-      date: formatDistanceToNow(new Date(review.created_at), {
-        addSuffix: true,
-      }),
-      comment: review.comment || review.content || "",
-      upvotes: 0, // These would come from a votes API
-      downvotes: 0,
-      flagged: review.status === "flagged",
-      // Convert replies to Comment format
-      replies: review.replies
-        ? review.replies.map((reply) => ({
-            id: reply.reply_id,
-            user: reply.user_name || t("government_official"),
-            userRole: reply.user_role,
-            date: formatDistanceToNow(new Date(reply.created_at), {
-              addSuffix: true,
-            }),
-            comment: reply.content,
-            upvotes: 0,
-            downvotes: 0,
-            flagged: false,
-            replies: [],
-            isOfficial:
-              reply.user_role === "official" || reply.user_role === "admin",
-          }))
-        : [],
-    }));
+    return reviews.map((review) => {
+      // Get vote counts for this review from Redux store
+      const voteCounts = votesByReview[review.review_id] || {
+        helpful: 0,
+        not_helpful: 0,
+        flag: 0,
+      };
+
+      return {
+        id: review.review_id,
+        user: review.user_name || t("anonymous"),
+        rating: review.rating,
+        date: formatDistanceToNow(new Date(review.created_at), {
+          addSuffix: true,
+        }),
+        comment: review.comment || review.content || "",
+        upvotes: voteCounts.helpful,
+        downvotes: voteCounts.not_helpful,
+        flagged: review.status === "flagged",
+        // Convert replies to Comment format
+        replies: review.replies
+          ? review.replies.map((reply) => ({
+              id: reply.reply_id,
+              user: reply.user_name || t("government_official"),
+              userRole: reply.user_role,
+              date: formatDistanceToNow(new Date(reply.created_at), {
+                addSuffix: true,
+              }),
+              comment: reply.content,
+              upvotes: 0,
+              downvotes: 0,
+              flagged: false,
+              replies: [],
+              isOfficial:
+                reply.user_role === "official" || reply.user_role === "admin",
+            }))
+          : [],
+      };
+    });
   };
 
   // Filter reviews based on search and rating
-  const filteredReviews = reviews.filter((review) => {
-    // Search filter
-    if (
-      searchQuery &&
-      !review.content?.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
+  const filteredReviews = (Array.isArray(reviews) ? reviews : []).filter(
+    (review) => {
+      // Search filter
+      if (
+        searchQuery &&
+        !review.content?.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
+        return false;
+      }
 
-    // Rating filter
-    if (ratingFilter !== "all" && review.rating !== parseInt(ratingFilter)) {
-      return false;
-    }
+      // Rating filter
+      if (ratingFilter !== "all" && review.rating !== parseInt(ratingFilter)) {
+        return false;
+      }
 
-    return true;
-  });
+      return true;
+    }
+  );
 
   // Get reviews based on the active tab
   const getTabReviews = () => {
@@ -138,11 +164,35 @@ export default function GovernmentFeedbackPage() {
     commentId: number | string,
     voteType: "upvote" | "downvote"
   ) => {
-    toast({
-      title: t("vote_recorded"),
-      description: t("thank_you_for_feedback"),
-    });
-    // In a real app, this would call an API to record the vote
+    if (!user) {
+      toast({
+        title: t("error"),
+        description: t("please_login_to_vote"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await dispatch(
+        voteOnReview({
+          reviewId: commentId.toString(),
+          voteType,
+        })
+      ).unwrap();
+
+      toast({
+        title: t("vote_recorded"),
+        description: t("thank_you_for_feedback"),
+      });
+    } catch (error) {
+      console.error("Vote error:", error);
+      toast({
+        title: t("error"),
+        description: t("vote_failed"),
+        variant: "destructive",
+      });
+    }
   };
 
   // Handle flagging a review

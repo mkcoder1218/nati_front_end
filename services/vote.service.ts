@@ -59,9 +59,33 @@ const VoteService = {
   },
 
   // Get votes for a review
-  getVotesByReview: async (reviewId: string): Promise<VoteCounts> => {
+  getVotesByReview: async (
+    reviewId: string
+  ): Promise<{ voteCounts: VoteCounts; userVote: Vote | null }> => {
     const response = await api.get(`/votes/review/${reviewId}`);
-    return response.data.data.votes;
+    const counts = response.data.data.counts;
+    const userVote = response.data.data.user_vote;
+
+    // Transform array of vote counts to object format expected by frontend
+    const voteCounts: VoteCounts = {
+      helpful: 0,
+      not_helpful: 0,
+      flag: 0,
+    };
+
+    if (Array.isArray(counts)) {
+      counts.forEach((count: { vote_type: string; count: number }) => {
+        if (count.vote_type === "helpful") {
+          voteCounts.helpful = count.count;
+        } else if (count.vote_type === "not_helpful") {
+          voteCounts.not_helpful = count.count;
+        } else if (count.vote_type === "flag") {
+          voteCounts.flag = count.count;
+        }
+      });
+    }
+
+    return { voteCounts, userVote };
   },
 
   // Get flagged reviews (admin/official only)
@@ -80,6 +104,18 @@ const VoteService = {
   getVoteStatistics: async (): Promise<VoteStatistics> => {
     const response = await api.get("/votes/statistics");
     return response.data.data.statistics;
+  },
+
+  // Get reviews that user has upvoted
+  getUserUpvotedReviews: async (): Promise<any[]> => {
+    const response = await api.get("/votes/user/upvoted-reviews");
+    return response.data.data.reviews;
+  },
+
+  // Get reviews that user has downvoted
+  getUserDownvotedReviews: async (): Promise<any[]> => {
+    const response = await api.get("/votes/user/downvoted-reviews");
+    return response.data.data.reviews;
   },
 };
 

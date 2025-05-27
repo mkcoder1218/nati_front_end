@@ -16,6 +16,10 @@ interface VoteState {
   userVoteStats: UserVoteStats | null;
   // Overall vote statistics (admin/official only)
   voteStatistics: VoteStatistics | null;
+  // User's upvoted reviews
+  upvotedReviews: any[];
+  // User's downvoted reviews
+  downvotedReviews: any[];
   loading: boolean;
   error: string | null;
 }
@@ -25,6 +29,8 @@ const initialState: VoteState = {
   userVotes: {},
   userVoteStats: null,
   voteStatistics: null,
+  upvotedReviews: [],
+  downvotedReviews: [],
   loading: false,
   error: null,
 };
@@ -55,10 +61,12 @@ export const voteOnReview = createAsyncThunk(
         vote_type: backendVoteType,
       });
 
-      // Fetch updated vote counts
-      const voteCounts = await VoteService.getVotesByReview(reviewId);
+      // Fetch updated vote counts and user vote
+      const { voteCounts, userVote } = await VoteService.getVotesByReview(
+        reviewId
+      );
 
-      return { vote, voteCounts, reviewId };
+      return { vote, voteCounts, reviewId, userVote };
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to vote on review"
@@ -73,10 +81,12 @@ export const removeVoteFromReview = createAsyncThunk(
     try {
       await VoteService.removeVote(reviewId);
 
-      // Fetch updated vote counts
-      const voteCounts = await VoteService.getVotesByReview(reviewId);
+      // Fetch updated vote counts and user vote
+      const { voteCounts, userVote } = await VoteService.getVotesByReview(
+        reviewId
+      );
 
-      return { reviewId, voteCounts };
+      return { reviewId, voteCounts, userVote };
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to remove vote"
@@ -134,7 +144,7 @@ export const fetchVotesByReview = createAsyncThunk(
 
       try {
         // Await the result
-        const voteCounts = await pendingVoteRequests[reviewId];
+        const { voteCounts, userVote } = await pendingVoteRequests[reviewId];
         console.log("Votes fetched successfully for review:", reviewId);
 
         // Mark this request as completed
@@ -143,7 +153,7 @@ export const fetchVotesByReview = createAsyncThunk(
         // Clear the pending request
         delete pendingVoteRequests[reviewId];
 
-        return { reviewId, voteCounts };
+        return { reviewId, voteCounts, userVote };
       } catch (error: any) {
         console.error("Error fetching votes:", error);
         // Clear the pending request on error
@@ -184,6 +194,36 @@ export const fetchVoteStatistics = createAsyncThunk(
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch vote statistics"
+      );
+    }
+  }
+);
+
+// Fetch user's upvoted reviews
+export const fetchUserUpvotedReviews = createAsyncThunk(
+  "vote/fetchUserUpvotedReviews",
+  async (_, { rejectWithValue }) => {
+    try {
+      const reviews = await VoteService.getUserUpvotedReviews();
+      return reviews;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch upvoted reviews"
+      );
+    }
+  }
+);
+
+// Fetch user's downvoted reviews
+export const fetchUserDownvotedReviews = createAsyncThunk(
+  "vote/fetchUserDownvotedReviews",
+  async (_, { rejectWithValue }) => {
+    try {
+      const reviews = await VoteService.getUserDownvotedReviews();
+      return reviews;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch downvoted reviews"
       );
     }
   }
@@ -297,6 +337,40 @@ const voteSlice = createSlice({
       }
     );
     builder.addCase(fetchVoteStatistics.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
+
+    // Fetch User Upvoted Reviews
+    builder.addCase(fetchUserUpvotedReviews.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(
+      fetchUserUpvotedReviews.fulfilled,
+      (state, action: PayloadAction<any[]>) => {
+        state.upvotedReviews = action.payload;
+        state.loading = false;
+      }
+    );
+    builder.addCase(fetchUserUpvotedReviews.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
+
+    // Fetch User Downvoted Reviews
+    builder.addCase(fetchUserDownvotedReviews.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(
+      fetchUserDownvotedReviews.fulfilled,
+      (state, action: PayloadAction<any[]>) => {
+        state.downvotedReviews = action.payload;
+        state.loading = false;
+      }
+    );
+    builder.addCase(fetchUserDownvotedReviews.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
     });

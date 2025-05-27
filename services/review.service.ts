@@ -24,6 +24,11 @@ export interface Review {
   user_name?: string;
   office_name?: string;
   replies?: ReviewReply[];
+  // Vote counts from backend
+  upvote_count?: number;
+  downvote_count?: number;
+  flag_count?: number;
+  // Legacy vote counts structure
   vote_counts?: {
     helpful: number;
     not_helpful: number;
@@ -62,6 +67,25 @@ const ReviewService = {
     if (params?.includeReplies) queryParams.append("includeReplies", "true");
 
     const response = await api.get(`/reviews?${queryParams.toString()}`);
+    return response.data.data;
+  },
+
+  // Get public approved reviews for browsing
+  getPublicReviews: async (params?: {
+    limit?: number;
+    offset?: number;
+    sortBy?: string;
+    sortOrder?: string;
+  }): Promise<{ reviews: Review[]; count: number }> => {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.offset) queryParams.append("offset", params.offset.toString());
+    if (params?.sortBy) queryParams.append("sortBy", params.sortBy);
+    if (params?.sortOrder) queryParams.append("sortOrder", params.sortOrder);
+
+    const response = await api.get(
+      `/reviews/public/browse?${queryParams.toString()}`
+    );
     return response.data.data;
   },
 

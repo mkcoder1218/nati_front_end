@@ -161,20 +161,12 @@ export function OfficeDetail({ officeId }: OfficeDetailProps) {
     votesByOffice,
   ]);
 
-  // Get reviews based on user role
+  // Get reviews - show all approved reviews for all users
   const getReviews = () => {
     if (!user) return [];
 
-    if (user.role === "admin" || user.role === "official") {
-      // Show all reviews for the office
-      return officeReviews[officeId] || [];
-    } else {
-      // Show only user's own reviews for this office
-      const userReviewsForOffice = userReviews[user.user_id] || [];
-      return userReviewsForOffice.filter(
-        (review) => review.office_id === officeId
-      );
-    }
+    // Show all approved reviews for the office
+    return officeReviews[officeId] || [];
   };
 
   const reviews = getReviews();
