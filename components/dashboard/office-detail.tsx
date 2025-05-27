@@ -104,22 +104,18 @@ export function OfficeDetail({ officeId }: OfficeDetailProps) {
 
           // Only fetch data if we haven't already
           if (!fetchedDataRef.current.reviews) {
-            if (user && (user.role === "admin" || user.role === "official")) {
-              // Fetch all reviews for the office
-              if (!officeReviews[officeId]) {
-                console.log("Fetching all reviews for office:", officeId);
-                promises.push(
-                  dispatch(fetchReviewsByOffice(officeId)).unwrap()
-                );
-              }
-            } else if (user) {
-              // Fetch user's own reviews
-              if (!userReviews[user.user_id]) {
-                console.log("Fetching user reviews for citizen:", user.user_id);
-                promises.push(
-                  dispatch(fetchReviewsByUser(user.user_id)).unwrap()
-                );
-              }
+            // All users (admin, official, and citizen) should see all reviews for the office
+            if (user && !officeReviews[officeId]) {
+              console.log("Fetching all reviews for office:", officeId);
+              promises.push(dispatch(fetchReviewsByOffice(officeId)).unwrap());
+            }
+
+            // Additionally fetch user's own reviews for citizens to manage their submissions
+            if (user && user.role === "citizen" && !userReviews[user.user_id]) {
+              console.log("Fetching user reviews for citizen:", user.user_id);
+              promises.push(
+                dispatch(fetchReviewsByUser(user.user_id)).unwrap()
+              );
             }
             fetchedDataRef.current.reviews = true;
           }
@@ -161,12 +157,19 @@ export function OfficeDetail({ officeId }: OfficeDetailProps) {
     votesByOffice,
   ]);
 
-  // Get reviews - show all approved reviews for all users
+  // Get reviews - show all reviews for the office based on user role
   const getReviews = () => {
     if (!user) return [];
 
-    // Show all approved reviews for the office
-    return officeReviews[officeId] || [];
+    const allOfficeReviews = officeReviews[officeId] || [];
+
+    // For admin and official users, show all reviews (including pending, flagged, etc.)
+    if (user.role === "admin" || user.role === "official") {
+      return allOfficeReviews;
+    }
+
+    // For citizen users, show only approved reviews
+    return allOfficeReviews.filter((review) => review.status === "approved");
   };
 
   const reviews = getReviews();
@@ -264,11 +267,14 @@ export function OfficeDetail({ officeId }: OfficeDetailProps) {
       setIsAnonymous(false);
       setActiveTab("reviews");
 
-      // Refresh reviews based on user role
-      if (user && (user.role === "admin" || user.role === "official")) {
+      // Refresh office reviews for all users to see the new review
+      if (user) {
         dispatch(fetchReviewsByOffice(officeId));
-      } else if (user) {
-        dispatch(fetchReviewsByUser(user.user_id));
+
+        // Also refresh user's own reviews for citizens to update their personal review list
+        if (user.role === "citizen") {
+          dispatch(fetchReviewsByUser(user.user_id));
+        }
       }
 
       // Refresh the office data to get updated ratings
@@ -542,13 +548,13 @@ export function OfficeDetail({ officeId }: OfficeDetailProps) {
                       variant="outline"
                       className="mt-4"
                       onClick={() => {
-                        if (
-                          user &&
-                          (user.role === "admin" || user.role === "official")
-                        ) {
+                        if (user) {
                           dispatch(fetchReviewsByOffice(officeId));
-                        } else if (user) {
-                          dispatch(fetchReviewsByUser(user.user_id));
+
+                          // Also refresh user's own reviews for citizens
+                          if (user.role === "citizen") {
+                            dispatch(fetchReviewsByUser(user.user_id));
+                          }
                         }
                       }}
                     >

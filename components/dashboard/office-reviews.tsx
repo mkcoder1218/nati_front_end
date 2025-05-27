@@ -30,11 +30,11 @@ export function OfficeReviews({ officeId }: OfficeReviewsProps) {
   const initialFetchDoneRef = useRef<boolean>(false);
   const fetchingVotesRef = useRef<Set<string>>(new Set());
 
-  // Fetch reviews based on user role
+  // Fetch reviews for the office
   useEffect(() => {
     if (!user || initialFetchDoneRef.current) return;
 
-    // All users can see all approved reviews for the office
+    // All users should see reviews for the office
     if (!officeReviews[officeId]) {
       console.log("OfficeReviews: Fetching all reviews for office:", officeId);
       dispatch(fetchReviewsByOffice(officeId));
@@ -87,11 +87,17 @@ export function OfficeReviews({ officeId }: OfficeReviewsProps) {
     }
   }, [dispatch, officeId, user, officeReviews]);
 
-  // Filter reviews by status - show approved and pending reviews
+  // Filter reviews based on user role
   const getApprovedReviews = () => {
-    return reviews.filter(
-      (review) => review.status === "approved" || review.status === "pending"
-    );
+    if (!user) return [];
+
+    // For admin and official users, show all reviews
+    if (user.role === "admin" || user.role === "official") {
+      return reviews;
+    }
+
+    // For citizen users, show only approved reviews
+    return reviews.filter((review) => review.status === "approved");
   };
 
   // Get recent reviews
